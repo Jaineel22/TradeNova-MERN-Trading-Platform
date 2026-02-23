@@ -326,8 +326,14 @@ app.post("/newOrder", auth, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log("App Started");
-  mongoose.connect(uri);
-  console.log("DB connected");
-}); 
+mongoose.connect(uri)
+  .then(() => {
+    console.log("DB connected successfully");
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("DB connection failed:", err);
+  });
