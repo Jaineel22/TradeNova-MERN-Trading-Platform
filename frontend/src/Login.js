@@ -11,17 +11,21 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post("https://tradenova-mern-trading-platform.onrender.com/login", {
-        email,
-        password,
-      });
+      const res = await axios.post(
+        "https://tradenova-mern-trading-platform.onrender.com/login",
+        {
+          email,
+          password,
+        },
+      );
 
       localStorage.setItem("token", res.data.token);
       if (rememberMe) {
         localStorage.setItem("rememberedEmail", email);
       }
-      navigate("/");
-    } catch (err) {
+      window.location.href =
+        "https://trade-nova-mern-trading-platform-re.vercel.app/";
+      } catch (err) {
       alert(err.response?.data?.message || "Login failed");
     }
   };
