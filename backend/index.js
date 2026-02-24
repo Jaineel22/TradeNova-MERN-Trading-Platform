@@ -28,9 +28,10 @@ app.use(
   cors({
     origin: [
       "https://trade-nova-mern-trading-platform.vercel.app",
-      "http://localhost:3000"
+      "https://trade-nova-mern-trading-platform-re.vercel.app"
     ],
-    credentials: true,
+    methods: ["GET", "POST"],
+    credentials: true
   })
 );
 app.use(bodyParser.json());
