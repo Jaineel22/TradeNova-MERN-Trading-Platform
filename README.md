@@ -113,7 +113,7 @@ Run the backend:
 npm start
 ```
 
-Runs on: `http://localhost:3003`
+Runs on: `https://tradenova-mern-trading-platform.onrender.com`
 
 ### 3. Frontend Setup
 ```bash

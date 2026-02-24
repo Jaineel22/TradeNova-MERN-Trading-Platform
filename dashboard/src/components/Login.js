@@ -9,7 +9,7 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post("http://localhost:3003/login", {
+      const res = await axios.post("https://tradenova-mern-trading-platform.onrender.com/login", {
         email,
         password,
       });

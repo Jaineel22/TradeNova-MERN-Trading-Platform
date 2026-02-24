@@ -8,7 +8,7 @@ const Holdings = () => {
   const fetchHoldings = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:3003/allHoldings",
+        "https://tradenova-mern-trading-platform.onrender.com/allHoldings",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,

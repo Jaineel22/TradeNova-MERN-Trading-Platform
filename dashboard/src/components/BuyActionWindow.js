@@ -21,7 +21,7 @@ const BuyActionWindow = ({ uid }) => {
       }
 
       const res = await axios.post(
-        "http://localhost:3003/newOrder",
+        "https://tradenova-mern-trading-platform.onrender.com/newOrder",
         {
           name: uid,
           qty: Number(stockQuantity),
