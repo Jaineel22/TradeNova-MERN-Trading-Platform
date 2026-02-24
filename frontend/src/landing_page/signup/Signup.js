@@ -11,7 +11,7 @@ function SignUp() {
 
   const handleSignup = async () => {
     try {
-      const res = await axios.post("https://tradenova-mern-trading-platform.onrender.com/register", {
+      const res = await axios.post("/register", {
         username,
         email,
         password,
