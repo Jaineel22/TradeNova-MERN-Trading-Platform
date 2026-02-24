@@ -45,6 +45,11 @@ function Navbar() {
             {!isLoggedIn && (
               <>
                 <li className="nav-item">
+                  <Link className="nav-link" to="/">
+                    Home
+                  </Link>
+                </li>
+                <li className="nav-item">
                   <Link className="nav-link" to="/signup">
                     Signup
                   </Link>
