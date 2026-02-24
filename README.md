@@ -113,8 +113,6 @@ Run the backend:
 npm start
 ```
 
-Runs on: `https://tradenova-mern-trading-platform.onrender.com`
-
 ### 3. Frontend Setup
 ```bash
 cd frontend
@@ -122,7 +120,6 @@ npm install
 npm start
 ```
 
-Runs on: `http://localhost:3001`
 
 ### 4. Dashboard Setup
 ```bash
@@ -130,8 +127,6 @@ cd dashboard
 npm install
 npm start
 ```
-
-Runs on: `http://localhost:3002`
 
 ---
 
