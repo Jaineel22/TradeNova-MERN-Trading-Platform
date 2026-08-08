@@ -1,12 +1,54 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Menu from "./Menu";
+import apiClient from "../config/apiClient";
+
+// Alpha Vantage's GLOBAL_QUOTE endpoint (backing GET /quote/:symbol) covers
+// individual listed securities, not indices like NIFTY/SENSEX. These are
+// well-known tickers it reliably resolves, so the ticker shows real data
+// instead of fabricated index values.
+const TICKER_SYMBOLS = ["AAPL", "MSFT"];
 
 const TopBar = () => {
-  // Sample market data
-  const marketData = {
-    nifty: { value: "22,345.60", change: "+125.30", percent: "+0.56%" },
-    sensex: { value: "73,892.15", change: "+412.45", percent: "+0.48%" }
-  };
+  const [quotes, setQuotes] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchQuotes = async () => {
+      const results = await Promise.allSettled(
+        TICKER_SYMBOLS.map((symbol) => apiClient.get(`/quote/${symbol}`))
+      );
+
+      if (!isMounted) return;
+
+      const next = {};
+      let anySucceeded = false;
+      let latestTimestamp = null;
+
+      results.forEach((result, index) => {
+        const symbol = TICKER_SYMBOLS[index];
+        if (result.status === "fulfilled") {
+          next[symbol] = result.value.data;
+          anySucceeded = true;
+          latestTimestamp = result.value.data.timestamp || latestTimestamp;
+        }
+      });
+
+      setQuotes(next);
+      setUnavailable(!anySucceeded);
+      setLastUpdated(latestTimestamp ? new Date(latestTimestamp) : null);
+      setLoading(false);
+    };
+
+    fetchQuotes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div style={{
@@ -26,71 +68,69 @@ const TopBar = () => {
         gap: "30px"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "30px" }}>
-          {/* NIFTY */}
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <span style={{ 
-              fontSize: "13px", 
-              fontWeight: "600", 
-              color: "#333",
-              minWidth: "70px"
-            }}>
-              NIFTY 50
+          {loading ? (
+            <span style={{ fontSize: "13px", color: "#666" }}>
+              Loading market data...
             </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ 
-                fontSize: "13px", 
-                fontWeight: "500", 
-                color: "#333" 
-              }}>
-                {marketData.nifty.value}
-              </span>
-              <span style={{ 
-                fontSize: "12px", 
-                color: "#28a745",
-                fontWeight: "500",
-                background: "#e8f5e9",
-                padding: "2px 6px",
-                borderRadius: "4px"
-              }}>
-                {marketData.nifty.change} ({marketData.nifty.percent})
-              </span>
-            </div>
-          </div>
+          ) : unavailable ? (
+            <span style={{ fontSize: "13px", color: "#999" }}>
+              Live market data unavailable
+            </span>
+          ) : (
+            TICKER_SYMBOLS.map((symbol) => {
+              const quote = quotes[symbol];
+              if (!quote) {
+                return (
+                  <div key={symbol} style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                    <span style={{ fontSize: "13px", fontWeight: "600", color: "#333", minWidth: "50px" }}>
+                      {symbol}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "#999" }}>unavailable</span>
+                  </div>
+                );
+              }
 
-          {/* SENSEX */}
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <span style={{ 
-              fontSize: "13px", 
-              fontWeight: "600", 
-              color: "#333",
-              minWidth: "70px"
-            }}>
-              SENSEX
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ 
-                fontSize: "13px", 
-                fontWeight: "500", 
-                color: "#333" 
-              }}>
-                {marketData.sensex.value}
-              </span>
-              <span style={{ 
-                fontSize: "12px", 
-                color: "#28a745",
-                fontWeight: "500",
-                background: "#e8f5e9",
-                padding: "2px 6px",
-                borderRadius: "4px"
-              }}>
-                {marketData.sensex.change} ({marketData.sensex.percent})
-              </span>
-            </div>
-          </div>
+              const isUp = quote.changePercent >= 0;
+
+              return (
+                <div key={symbol} style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                  <span style={{
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    color: "#333",
+                    minWidth: "50px"
+                  }}>
+                    {symbol}
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{
+                      fontSize: "13px",
+                      fontWeight: "500",
+                      color: "#333"
+                    }}>
+                      {quote.price.toFixed(2)}
+                    </span>
+                    <span style={{
+                      fontSize: "12px",
+                      color: isUp ? "#28a745" : "#dc3545",
+                      fontWeight: "500",
+                      background: isUp ? "#e8f5e9" : "#fdecea",
+                      padding: "2px 6px",
+                      borderRadius: "4px"
+                    }}>
+                      {isUp ? "+" : ""}
+                      {quote.change.toFixed(2)} ({isUp ? "+" : ""}
+                      {quote.changePercent.toFixed(2)}%)
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Market Status */}
-        <div style={{ 
+        <div style={{
           marginLeft: "auto",
           display: "flex",
           alignItems: "center",
@@ -98,19 +138,11 @@ const TopBar = () => {
         }}>
           <span style={{
             fontSize: "11px",
-            padding: "4px 8px",
-            background: "#28a745",
-            color: "white",
-            borderRadius: "12px",
-            fontWeight: "500"
-          }}>
-            Market Open
-          </span>
-          <span style={{
-            fontSize: "11px",
             color: "#666"
           }}>
-            Last updated: 10:30 AM
+            {lastUpdated
+              ? `Last updated: ${lastUpdated.toLocaleTimeString()}`
+              : ""}
           </span>
         </div>
       </div>

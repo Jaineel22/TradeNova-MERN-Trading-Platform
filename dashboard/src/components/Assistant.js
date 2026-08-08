@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import { API_BASE_URL as API_BASE } from "../config/api";
+import apiClient from "../config/apiClient";
 
 const SUGGESTED_QUESTIONS = [
   "What is my current P&L?",
@@ -8,10 +7,6 @@ const SUGGESTED_QUESTIONS = [
   "Summarize my portfolio.",
   "What is my available balance?",
 ];
-
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token")}`,
-});
 
 const Assistant = () => {
   const [messages, setMessages] = useState([
@@ -42,20 +37,13 @@ const Assistant = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        `${API_BASE}/ai/ask`,
-        { question: trimmed },
-        { headers: authHeaders() }
-      );
+      const res = await apiClient.post("/ai/ask", { question: trimmed });
       setMessages((prev) => [
         ...prev,
         { role: "assistant", text: res.data.answer },
       ]);
     } catch (err) {
       if (err.response?.status === 401) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("token");
-        window.location.href = "/login";
         return;
       }
       setError(

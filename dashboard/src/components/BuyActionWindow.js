@@ -1,8 +1,7 @@
 import React, { useState, useContext } from "react";
-import axios from "axios";
 import GeneralContext from "./GeneralContext";
 import "./BuyActionWindow.css";
-import { API_BASE_URL } from "../config/api";
+import apiClient from "../config/apiClient";
 
 const BuyActionWindow = ({ uid }) => {
   const context = useContext(GeneralContext);
@@ -13,37 +12,17 @@ const BuyActionWindow = ({ uid }) => {
 
   const placeOrder = async (mode) => {
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("Session expired. Please login again.");
-        window.location.href = "/login";
-        return;
-      }
-
-      const res = await axios.post(
-        `${API_BASE_URL}/newOrder`,
-        {
-          name: uid,
-          qty: Number(stockQuantity),
-          price: Number(stockPrice),
-          mode,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await apiClient.post("/newOrder", {
+        name: uid,
+        qty: Number(stockQuantity),
+        price: Number(stockPrice),
+        mode,
+      });
 
       alert(res.data.message);
       closeBuyWindow();
     } catch (err) {
-      if (err.response?.status === 401) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      } else {
+      if (err.response?.status !== 401) {
         alert(err.response?.data?.message || "Order failed");
       }
     }

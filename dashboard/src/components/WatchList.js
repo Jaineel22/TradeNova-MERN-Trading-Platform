@@ -1,7 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
 
-import axios from "axios";
-
 import GeneralContext from "./GeneralContext";
 
 import { Tooltip, Grow } from "@mui/material";
@@ -14,33 +12,19 @@ import {
 } from "@mui/icons-material";
 
 import { DoughnutChart } from "./DoughnoutChart";
-import { API_BASE_URL as API_BASE } from "../config/api";
-
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token")}`,
-});
-
-const handleAuthError = (err) => {
-  if (err.response?.status === 401) {
-    alert("Session expired. Please login again.");
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-    return true;
-  }
-  return false;
-};
+import apiClient from "../config/apiClient";
 
 const WatchList = () => {
   const [watchlist, setWatchlist] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchValue, setSearchValue] = useState("");
 
   const loadWatchlist = async () => {
     setLoading(true);
+    setError("");
     try {
-      const res = await axios.get(`${API_BASE}/watchlist`, {
-        headers: authHeaders(),
-      });
+      const res = await apiClient.get("/watchlist");
       setWatchlist(
         res.data.map((item) => ({
           name: item.symbol,
@@ -50,8 +34,10 @@ const WatchList = () => {
         }))
       );
     } catch (err) {
-      if (!handleAuthError(err)) {
-        console.error("Failed to load watchlist:", err.response?.data?.message);
+      if (err.response?.status !== 401) {
+        setError(
+          err.response?.data?.message || "Failed to load watchlist."
+        );
       }
     } finally {
       setLoading(false);
@@ -70,20 +56,13 @@ const WatchList = () => {
     if (!symbol) return;
 
     try {
-      await axios.post(
-        `${API_BASE}/watchlist`,
-        { symbol },
-        { headers: authHeaders() }
-      );
+      await apiClient.post("/watchlist", { symbol });
 
       setSearchValue("");
 
       let quote = null;
       try {
-        const quoteRes = await axios.get(
-          `${API_BASE}/quote/${symbol}`,
-          { headers: authHeaders() }
-        );
+        const quoteRes = await apiClient.get(`/quote/${symbol}`);
         quote = quoteRes.data;
       } catch (quoteErr) {
         // Live price unavailable for this symbol (unsupported symbol or
@@ -100,7 +79,7 @@ const WatchList = () => {
         },
       ]);
     } catch (err) {
-      if (!handleAuthError(err)) {
+      if (err.response?.status !== 401) {
         alert(err.response?.data?.message || "Failed to add symbol");
       }
     }
@@ -108,12 +87,10 @@ const WatchList = () => {
 
   const handleRemoveSymbol = async (symbol) => {
     try {
-      await axios.delete(`${API_BASE}/watchlist/${symbol}`, {
-        headers: authHeaders(),
-      });
+      await apiClient.delete(`/watchlist/${symbol}`);
       setWatchlist((prev) => prev.filter((item) => item.name !== symbol));
     } catch (err) {
-      if (!handleAuthError(err)) {
+      if (err.response?.status !== 401) {
         alert(err.response?.data?.message || "Failed to remove symbol");
       }
     }
@@ -167,6 +144,14 @@ const WatchList = () => {
       {loading ? (
         <p style={{ padding: "10px 20px", color: "#666", fontSize: "13px" }}>
           Loading watchlist...
+        </p>
+      ) : error ? (
+        <p style={{ padding: "10px 20px", color: "#b3261e", fontSize: "13px" }}>
+          {error}
+        </p>
+      ) : watchlist.length === 0 ? (
+        <p style={{ padding: "10px 20px", color: "#666", fontSize: "13px" }}>
+          Your watchlist is empty. Search for a symbol above and press Enter to add it.
         </p>
       ) : (
         <ul className="list">

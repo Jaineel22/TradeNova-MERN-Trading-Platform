@@ -12,6 +12,6 @@ const OrderSchema = new Schema({
   qty: Number,
   price: Number,
   mode: String,
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model("Order", OrderSchema, "orders");

@@ -1,7 +1,57 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import apiClient from "../config/apiClient";
+
+const formatMoney = (n) => {
+  const value = Number(n) || 0;
+  return value.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 const Funds = () => {
+  const [funds, setFunds] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchFunds = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await apiClient.get("/funds");
+        setFunds(res.data);
+      } catch (err) {
+        if (err.response?.status !== 401) {
+          setError(
+            err.response?.data?.message || "Failed to load funds. Please try again."
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFunds();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="funds">
+        <p>Loading funds...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="funds">
+        <p>{error}</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="funds">
@@ -18,58 +68,17 @@ const Funds = () => {
 
           <div className="table">
             <div className="data">
-              <p>Available margin</p>
-              <p className="imp colored">4,043.10</p>
+              <p>Available balance</p>
+              <p className="imp colored">{formatMoney(funds?.balance)}</p>
             </div>
             <div className="data">
-              <p>Used margin</p>
-              <p className="imp">3,757.30</p>
-            </div>
-            <div className="data">
-              <p>Available cash</p>
-              <p className="imp">4,043.10</p>
+              <p>Invested value</p>
+              <p className="imp">{formatMoney(funds?.investedValue)}</p>
             </div>
             <hr />
             <div className="data">
-              <p>Opening Balance</p>
-              <p>4,043.10</p>
-            </div>
-            <div className="data">
-              <p>Opening Balance</p>
-              <p>3736.40</p>
-            </div>
-            <div className="data">
-              <p>Payin</p>
-              <p>4064.00</p>
-            </div>
-            <div className="data">
-              <p>SPAN</p>
-              <p>0.00</p>
-            </div>
-            <div className="data">
-              <p>Delivery margin</p>
-              <p>0.00</p>
-            </div>
-            <div className="data">
-              <p>Exposure</p>
-              <p>0.00</p>
-            </div>
-            <div className="data">
-              <p>Options premium</p>
-              <p>0.00</p>
-            </div>
-            <hr />
-            <div className="data">
-              <p>Collateral (Liquid funds)</p>
-              <p>0.00</p>
-            </div>
-            <div className="data">
-              <p>Collateral (Equity)</p>
-              <p>0.00</p>
-            </div>
-            <div className="data">
-              <p>Total Collateral</p>
-              <p>0.00</p>
+              <p>Total account value</p>
+              <p className="imp">{formatMoney(funds?.totalAccountValue)}</p>
             </div>
           </div>
         </div>

@@ -18,6 +18,10 @@ async function getPositions(userId) {
   return Position.find({ userId });
 }
 
+async function getOrders(userId) {
+  return Order.find({ userId }).sort({ createdAt: -1 });
+}
+
 async function getFunds(userId) {
   const user = await User.findById(userId);
   if (!user) {
@@ -117,4 +121,4 @@ async function executeOrder(userId, { name, qty, price, mode }) {
   };
 }
 
-module.exports = { getHoldings, getPositions, getFunds, executeOrder };
+module.exports = { getHoldings, getPositions, getFunds, getOrders, executeOrder };

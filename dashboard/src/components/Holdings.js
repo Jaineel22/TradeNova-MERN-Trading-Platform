@@ -1,31 +1,26 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { VerticalGraph } from "./VerticalGraph";
-import { API_BASE_URL } from "../config/api";
+import apiClient from "../config/apiClient";
 
 const Holdings = () => {
   const [allHoldings, setAllHoldings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const fetchHoldings = async () => {
+    setLoading(true);
+    setError("");
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/allHoldings`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
+      const res = await apiClient.get("/allHoldings");
       setAllHoldings(res.data);
     } catch (err) {
-      console.error("Auth Error:", err.response?.data?.message);
-
-      if (err.response?.status === 401) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("token");
-        window.location.href = "/login";
+      if (err.response?.status !== 401) {
+        setError(
+          err.response?.data?.message || "Failed to load holdings. Please try again."
+        );
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -45,6 +40,33 @@ const Holdings = () => {
       },
     ],
   };
+
+  if (loading) {
+    return (
+      <>
+        <h3 className="title">Holdings</h3>
+        <p>Loading holdings...</p>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <h3 className="title">Holdings</h3>
+        <p>{error}</p>
+      </>
+    );
+  }
+
+  if (allHoldings.length === 0) {
+    return (
+      <>
+        <h3 className="title">Holdings (0)</h3>
+        <p>You don't have any holdings yet. Buy a stock from your watchlist to get started.</p>
+      </>
+    );
+  }
 
   return (
     <>

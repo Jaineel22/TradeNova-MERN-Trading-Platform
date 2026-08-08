@@ -2,6 +2,7 @@ const {
   getHoldings,
   getPositions,
   getFunds,
+  getOrders,
   executeOrder,
 } = require("../services/tradingService");
 
@@ -41,4 +42,13 @@ async function funds(req, res, next) {
   }
 }
 
-module.exports = { allHoldings, allPositions, newOrder, funds };
+async function allOrders(req, res, next) {
+  try {
+    const orders = await getOrders(req.user.id);
+    res.json(orders);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { allHoldings, allPositions, newOrder, funds, allOrders };

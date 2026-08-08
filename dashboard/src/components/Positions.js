@@ -1,36 +1,62 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../config/api";
+import apiClient from "../config/apiClient";
 
 const Positions = () => {
   const [allPositions, setAllPositions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const fetchPositions = async () => {
+    setLoading(true);
+    setError("");
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/allPositions`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
+      const res = await apiClient.get("/allPositions");
       setAllPositions(res.data);
     } catch (err) {
-      console.error("Auth Error:", err.response?.data?.message);
-
-      if (err.response?.status === 401) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("token");
-        window.location.href = "/login";
+      if (err.response?.status !== 401) {
+        setError(
+          err.response?.data?.message || "Failed to load positions. Please try again."
+        );
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchPositions();
   }, []);
+
+  if (loading) {
+    return (
+      <>
+        <h3 className="title">Positions</h3>
+        <p>Loading positions...</p>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <h3 className="title">Positions</h3>
+        <p>{error}</p>
+      </>
+    );
+  }
+
+  if (allPositions.length === 0) {
+    return (
+      <>
+        <h3 className="title">Positions (0)</h3>
+        <p>
+          You don't have any open positions. TradeNova currently tracks
+          delivery-style holdings (see the Holdings tab) rather than
+          intraday positions.
+        </p>
+      </>
+    );
+  }
 
   return (
     <>
