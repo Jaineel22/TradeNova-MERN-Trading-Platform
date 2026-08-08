@@ -2,6 +2,7 @@
   import { Route, Routes } from "react-router-dom";
 
   import Apps from "./Apps";
+  import Assistant from "./Assistant";
   import Funds from "./Funds";
   import Holdings from "./Holdings";
 
@@ -25,6 +26,7 @@
             <Route path="/positions" element={<Positions />} />
             <Route path="/funds" element={<Funds />} />
             <Route path="/apps" element={<Apps />} />
+            <Route path="/assistant" element={<Assistant />} />
           </Routes>
         </div>
       </div>

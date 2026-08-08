@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 
 const Positions = () => {
   const [allPositions, setAllPositions] = useState([]);
@@ -7,7 +8,7 @@ const Positions = () => {
   const fetchPositions = async () => {
     try {
       const res = await axios.get(
-        "https://tradenova-mern-trading-platform.onrender.com/allPositions",
+        `${API_BASE_URL}/allPositions`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,

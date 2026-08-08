@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { VerticalGraph } from "./VerticalGraph";
+import { API_BASE_URL } from "../config/api";
 
 const Holdings = () => {
   const [allHoldings, setAllHoldings] = useState([]);
@@ -8,7 +9,7 @@ const Holdings = () => {
   const fetchHoldings = async () => {
     try {
       const res = await axios.get(
-        "https://tradenova-mern-trading-platform.onrender.com/allHoldings",
+        `${API_BASE_URL}/allHoldings`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,

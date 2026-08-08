@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import axios from "axios";
 import GeneralContext from "./GeneralContext";
 import "./BuyActionWindow.css";
+import { API_BASE_URL } from "../config/api";
 
 const BuyActionWindow = ({ uid }) => {
   const context = useContext(GeneralContext);
@@ -21,7 +22,7 @@ const BuyActionWindow = ({ uid }) => {
       }
 
       const res = await axios.post(
-        "https://tradenova-mern-trading-platform.onrender.com/newOrder",
+        `${API_BASE_URL}/newOrder`,
         {
           name: uid,
           qty: Number(stockQuantity),

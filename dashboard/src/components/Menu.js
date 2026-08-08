@@ -164,6 +164,26 @@ const Menu = () => {
               </p>
             </Link>
           </li>
+          <li>
+            <Link
+              style={{ textDecoration: "none" }}
+              to="/assistant"
+              onClick={() => handleMenuClick(6)}
+            >
+              <p className={selectedMenu === 6 ? activeMenuClass : menuClass}
+                 style={{
+                   color: selectedMenu === 6 ? "#1e3c72" : "#666",
+                   fontWeight: selectedMenu === 6 ? "600" : "400",
+                   fontSize: "14px",
+                   margin: 0,
+                   padding: "5px 0",
+                   borderBottom: selectedMenu === 6 ? "2px solid #1e3c72" : "none",
+                   transition: "all 0.3s ease"
+                 }}>
+                Assistant
+              </p>
+            </Link>
+          </li>
         </ul>
 
         {/* Profile Section */}

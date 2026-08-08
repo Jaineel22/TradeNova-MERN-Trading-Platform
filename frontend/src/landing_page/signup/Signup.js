@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config/api";
 
 function SignUp() {
   const [username, setUsername] = useState("");
@@ -11,7 +12,7 @@ function SignUp() {
 
   const handleSignup = async () => {
     try {
-      const res = await axios.post("https://tradenova-mern-trading-platform.onrender.com/register", {
+      const res = await axios.post(`${API_BASE_URL}/register`, {
         username,
         email,
         password,

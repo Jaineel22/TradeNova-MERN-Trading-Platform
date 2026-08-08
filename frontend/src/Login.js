@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "./config/api";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -12,7 +13,7 @@ function Login() {
   const handleLogin = async () => {
     try {
       const res = await axios.post(
-        "https://tradenova-mern-trading-platform.onrender.com/login",
+        `${API_BASE_URL}/login`,
         {
           email,
           password,
