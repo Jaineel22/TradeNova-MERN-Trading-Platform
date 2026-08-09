@@ -3,6 +3,8 @@ const Order = require("../models/Order");
 const Position = require("../models/Position");
 const User = require("../models/User");
 const { validateNewOrderInput } = require("../validators/orderValidators");
+const { normalizeSymbol } = require("../validators/marketValidators");
+const marketDataService = require("./marketDataService");
 
 function makeError(message, status) {
   const err = new Error(message);
@@ -41,10 +43,15 @@ async function getFunds(userId) {
   };
 }
 
-async function executeOrder(userId, { name, qty, price, mode }) {
-  const validationError = validateNewOrderInput({ name, qty, price, mode });
+async function executeOrder(userId, { name, qty, mode }) {
+  const validationError = validateNewOrderInput({ name, qty, mode });
   if (validationError) {
     throw makeError(validationError, 400);
+  }
+
+  const symbol = normalizeSymbol(name);
+  if (!symbol) {
+    throw makeError("Invalid stock symbol", 400);
   }
 
   const user = await User.findById(userId);
@@ -52,18 +59,34 @@ async function executeOrder(userId, { name, qty, price, mode }) {
     throw makeError("User not found", 404);
   }
 
-  let existingHolding = await Holding.findOne({ userId, name });
-  let updatedBalance = user.balance;
+  // Execution price always comes from the live quote, never from the
+  // client, so an order can't be placed at a fabricated price.
+  let quote;
+  try {
+    quote = await marketDataService.getQuote(symbol);
+  } catch (err) {
+    throw makeError(`Unable to execute order: ${err.message}`, err.status || 502);
+  }
+  const price = quote.price;
+
+  let updatedUser;
 
   if (mode === "BUY") {
     const orderCost = qty * price;
 
-    if (user.balance < orderCost) {
+    // Atomic conditional decrement: the balance check and the debit happen
+    // in one operation, so a double-submit or two concurrent BUYs can't both
+    // read a sufficient balance and then both deduct from it.
+    updatedUser = await User.findOneAndUpdate(
+      { _id: userId, balance: { $gte: orderCost } },
+      { $inc: { balance: -orderCost } },
+      { returnDocument: "after" }
+    );
+    if (!updatedUser) {
       throw makeError("Insufficient funds", 400);
     }
 
-    updatedBalance = user.balance - orderCost;
-
+    const existingHolding = await Holding.findOne({ userId, name: symbol });
     if (existingHolding) {
       const totalQty = existingHolding.qty + qty;
       const newAvg =
@@ -75,49 +98,34 @@ async function executeOrder(userId, { name, qty, price, mode }) {
 
       await existingHolding.save();
     } else {
-      const newHolding = new Holding({
-        userId,
-        name,
-        qty,
-        avg: price,
-        price,
-      });
-      await newHolding.save();
+      await Holding.create({ userId, name: symbol, qty, avg: price, price });
     }
-  }
-
-  if (mode === "SELL") {
-    if (!existingHolding) {
-      throw makeError("Stock not owned!", 400);
+  } else {
+    // SELL: atomic conditional decrement guards the same way, so a
+    // concurrent SELL of the same holding can't push quantity negative.
+    const updatedHolding = await Holding.findOneAndUpdate(
+      { userId, name: symbol, qty: { $gte: qty } },
+      { $inc: { qty: -qty }, $set: { price } },
+      { returnDocument: "after" }
+    );
+    if (!updatedHolding) {
+      const owned = await Holding.findOne({ userId, name: symbol });
+      throw makeError(owned ? "Insufficient quantity!" : "Stock not owned!", 400);
     }
-
-    if (existingHolding.qty < qty) {
-      throw makeError("Insufficient quantity!", 400);
-    }
-
-    existingHolding.qty -= qty;
-    existingHolding.price = price;
-
-    if (existingHolding.qty === 0) {
-      await Holding.deleteOne({ userId, name });
-    } else {
-      await existingHolding.save();
+    if (updatedHolding.qty === 0) {
+      await Holding.deleteOne({ _id: updatedHolding._id });
     }
 
     const proceeds = qty * price;
-    updatedBalance = user.balance + proceeds;
+    updatedUser = await User.findByIdAndUpdate(userId, { $inc: { balance: proceeds } }, { returnDocument: "after" });
   }
 
-  const newOrder = new Order({ userId, name, qty, price, mode });
-  await newOrder.save();
-
-  user.balance = updatedBalance;
-  await user.save();
+  const newOrder = await Order.create({ userId, name: symbol, qty, price, mode });
 
   return {
     message: "Order executed successfully",
     order: newOrder,
-    balance: user.balance,
+    balance: updatedUser.balance,
   };
 }
 
