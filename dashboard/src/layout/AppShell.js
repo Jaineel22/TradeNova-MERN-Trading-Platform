@@ -12,7 +12,7 @@ const AppShell = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", background: "#F4F6FA" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", background: "background.default" }}>
       {isMobile ? (
         <Drawer
           variant="temporary"
@@ -35,7 +35,7 @@ const AppShell = () => {
 
       <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <Topbar onMenuClick={() => setMobileOpen(true)} showMenuButton={isMobile} />
-        <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3 } }}>
+        <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 2.5, md: 3.5 }, maxWidth: 1440, width: "100%", mx: "auto" }}>
           <Outlet />
         </Box>
       </Box>
