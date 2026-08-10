@@ -16,33 +16,54 @@ async function registerUser({ username, email, password }) {
     throw makeError(validationError, 400);
   }
 
-  const existingUser = await User.findOne({ email });
+  const normalizedUsername = username.trim();
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existingUser = await User.findOne({
+    $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
+  });
   if (existingUser) {
-    throw makeError("User already exists", 400);
+    throw makeError("Username or email is already in use", 400);
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const newUser = new User({
-    username,
-    email,
-    password: hashedPassword,
-  });
-
-  await newUser.save();
+  try {
+    await User.create({
+      username: normalizedUsername,
+      email: normalizedEmail,
+      password: hashedPassword,
+    });
+  } catch (err) {
+    // Closes the race between the uniqueness check above and this insert -
+    // without this, a duplicate-key error would otherwise propagate as a
+    // raw MongoDB error (leaking collection/index names) via the generic
+    // error handler instead of a clean 400.
+    if (err.code === 11000) {
+      throw makeError("Username or email is already in use", 400);
+    }
+    throw err;
+  }
 
   return { message: "User registered successfully" };
 }
 
 async function loginUser({ email, password }) {
-  const user = await User.findOne({ email });
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : email;
+  const user = await User.findOne({ email: normalizedEmail });
+
+  // Same generic message whether the account doesn't exist or the password
+  // is wrong - distinguishing the two lets an attacker enumerate registered
+  // emails.
+  const invalidCredentials = () => makeError("Invalid credentials", 400);
+
   if (!user) {
-    throw makeError("User not found", 400);
+    throw invalidCredentials();
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    throw makeError("Invalid credentials", 400);
+    throw invalidCredentials();
   }
 
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
