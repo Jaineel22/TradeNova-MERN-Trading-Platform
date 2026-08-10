@@ -125,6 +125,66 @@ or the shell environment) before `npm start`.
 
 ---
 
+## Testing & CI
+
+Both apps have automated test suites; a GitHub Actions workflow (`.github/workflows/ci.yml`) runs both on
+every push and pull request.
+
+### Backend (`backend/`)
+
+Jest + Supertest, run against a real, in-process MongoDB (`mongodb-memory-server`) — no external database, no
+internet access, and nothing ever touches a developer or production database. Yahoo Finance and Gemini are
+both mocked (`tests/mocks/`), so the suite never makes a real market-data or AI API call and needs no real
+API keys.
+
+```bash
+cd backend
+npm test               # run once
+npm run test:coverage  # with a coverage report (backend/coverage/)
+```
+
+Covers: registration/login validation and enumeration-resistance, protected-route auth, buy/sell order
+execution and validation (insufficient funds/holdings, invalid symbol/quantity/mode), portfolio P&L/allocation
+math, watchlist CRUD, AI assistant request handling (including that a client can't override whose account
+context is sent to the model), rate limiting, and cross-user authorization (a dedicated suite proves user B
+can never read or modify user A's watchlist, holdings, orders, or funds).
+
+`JWT_SECRET` and the rate-limit thresholds default to test-safe values in `tests/setupAfterEnv.js` if unset,
+so no `.env` file or secrets are required to run the suite locally or in CI.
+
+### Dashboard (`dashboard/`)
+
+Jest + React Testing Library, already bundled with Create React App — no new frontend testing dependency was
+added. `src/config/apiClient.js` is mocked in every test (`src/config/__mocks__/apiClient.js`), so no test
+depends on a live backend.
+
+```bash
+cd dashboard
+npm test                # watch mode
+npm run test:coverage   # one-shot run with a coverage report (dashboard/coverage/)
+npm run build            # production build
+```
+
+Covers: every public/auth/dashboard route rendering and redirect behaviour (logged-in vs logged-out),
+watchlist loading/empty/error states and add/remove/trade interactions, the buy/sell dialog's quantity
+stepper, submission and error handling, and the Dashboard's metric cards/holdings/orders rendering from
+real API response shapes.
+
+Not covered by an automated UI test yet: Orders/Holdings/Positions/Funds/Markets/Stock-Detail page rendering
+and the Login/Signup submit flows — these are exercised by the backend's integration tests and were manually
+verified in earlier phases, but don't have dedicated React Testing Library coverage.
+
+### What's intentionally not automated
+
+A full browser-based end-to-end suite (e.g. Playwright driving real backend + frontend + database processes)
+was not added to CI. The backend integration tests already exercise the real trading/auth/authorization logic
+end-to-end at the API layer, and the frontend component tests cover real user interactions — introducing a
+second, heavier E2E layer on top would mean orchestrating multi-process startup in CI for a large increase in
+complexity and flakiness relative to what it would add. Manual end-to-end verification (real backend, real
+Yahoo Finance, a real browser) was performed throughout earlier phases instead.
+
+---
+
 ## Deployment
 
 `dashboard/` is the only application that should be deployed as the public-facing TradeNova product — set
