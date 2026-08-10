@@ -97,7 +97,13 @@ const BuyActionWindow = ({ uid }) => {
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>Quantity</Typography>
             <Stack direction="row" alignItems="center" spacing={1}>
-              <IconButton size="small" onClick={() => step(-1)} disabled={submitting || Number(qty) <= 1} sx={{ border: "1px solid", borderColor: "divider" }}>
+              <IconButton
+                size="small"
+                aria-label="Decrease quantity"
+                onClick={() => step(-1)}
+                disabled={submitting || Number(qty) <= 1}
+                sx={{ border: "1px solid", borderColor: "divider" }}
+              >
                 <RemoveIcon fontSize="small" />
               </IconButton>
               <TextField
@@ -109,7 +115,13 @@ const BuyActionWindow = ({ uid }) => {
                 disabled={submitting}
                 sx={{ width: 96 }}
               />
-              <IconButton size="small" onClick={() => step(1)} disabled={submitting} sx={{ border: "1px solid", borderColor: "divider" }}>
+              <IconButton
+                size="small"
+                aria-label="Increase quantity"
+                onClick={() => step(1)}
+                disabled={submitting}
+                sx={{ border: "1px solid", borderColor: "divider" }}
+              >
                 <AddIcon fontSize="small" />
               </IconButton>
             </Stack>
