@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useCallback, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Box, Button, Grid, Card, CardContent, Typography, Stack } from "@mui/material";
+import { Box, Button, Grid, Typography, Stack, Chip } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import BookmarkAddOutlinedIcon from "@mui/icons-material/BookmarkAddOutlined";
 import BookmarkAddedOutlinedIcon from "@mui/icons-material/BookmarkAddedOutlined";
 import SwapHorizOutlinedIcon from "@mui/icons-material/SwapHorizOutlined";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import apiClient from "../config/apiClient";
 import QuoteCard from "../components/QuoteCard";
 import PriceHistoryChart from "../components/PriceHistoryChart";
+import SectionCard from "../components/SectionCard";
 import { LoadingState, ErrorState } from "../components/StateMessage";
 import { displaySymbol } from "../utils/symbol";
 import GeneralContext, { GeneralContextProvider } from "../components/GeneralContext";
@@ -99,9 +101,18 @@ const StockDetailInner = () => {
 
   return (
     <Box>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/dashboard/markets")} sx={{ mb: 2 }}>
-        Back to Markets
-      </Button>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/dashboard/markets")}>
+          Back to Markets
+        </Button>
+        <Chip
+          size="small"
+          icon={<ScienceOutlinedIcon sx={{ fontSize: "15px !important" }} />}
+          label="Paper trading · simulated execution"
+          variant="outlined"
+          color="secondary"
+        />
+      </Stack>
 
       {loading ? (
         <LoadingState label="Loading quote..." />
@@ -133,10 +144,10 @@ const StockDetailInner = () => {
 
           {holdingChecked && holding && (
             <Grid item xs={12}>
-              <Card>
-                <CardContent sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              <SectionCard title="Your position">
+                <Stack direction="row" spacing={4} flexWrap="wrap">
                   <Box>
-                    <Typography variant="body2" color="text.secondary">You own</Typography>
+                    <Typography variant="body2" color="text.secondary">Quantity</Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>{holding.quantity} shares</Typography>
                   </Box>
                   <Box>
@@ -149,12 +160,12 @@ const StockDetailInner = () => {
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">P&L</Typography>
-                    <Typography variant="h6" sx={{ color: holding.pnl >= 0 ? "success.main" : "error.main" }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: holding.pnl >= 0 ? "success.main" : "error.main" }}>
                       {holding.pnl >= 0 ? "+" : ""}{money(holding.pnl)}
                     </Typography>
                   </Box>
-                </CardContent>
-              </Card>
+                </Stack>
+              </SectionCard>
             </Grid>
           )}
 

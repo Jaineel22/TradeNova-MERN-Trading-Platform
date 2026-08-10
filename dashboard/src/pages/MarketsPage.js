@@ -1,13 +1,20 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Card, CardContent, Typography, TextField, Button, Stack, Chip } from "@mui/material";
+import { Box, TextField, Button, Stack, Chip, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
 import apiClient from "../config/apiClient";
 import QuoteCard from "../components/QuoteCard";
+import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateMessage";
 import { displaySymbol } from "../utils/symbol";
 
-const EXAMPLE_SYMBOLS = ["TCS", "INFY", "RELIANCE", "HDFCBANK", "ITC", "SBIN", "AAPL", "MSFT", "NVDA"];
+const INDEX_SYMBOLS = [
+  { label: "NIFTY 50", symbol: "^NSEI" },
+  { label: "SENSEX", symbol: "^BSESN" },
+];
+const STOCK_SYMBOLS = ["TCS", "INFY", "RELIANCE", "HDFCBANK", "ITC", "SBIN", "AAPL", "MSFT", "NVDA"];
 
 const MarketsPage = () => {
   const navigate = useNavigate();
@@ -44,31 +51,49 @@ const MarketsPage = () => {
 
   return (
     <Box>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>Markets</Typography>
+      <PageHeader title="Markets" description="Search any NSE or global symbol for a live quote, backed by real Yahoo Finance data." />
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
-            <TextField
-              fullWidth
+      <SectionCard sx={{ mb: 3 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search symbol e.g. TCS, INFY, RELIANCE, AAPL"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            sx={{ flex: 1, minWidth: 220 }}
+          />
+          <Button type="submit" variant="contained" startIcon={<SearchIcon />} disabled={loading}>
+            Search
+          </Button>
+        </Box>
+
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2, mb: 0.75 }}>
+          Indices
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+          {INDEX_SYMBOLS.map((idx) => (
+            <Chip
+              key={idx.symbol}
+              label={idx.label}
               size="small"
-              placeholder="Search symbol e.g. TCS, INFY, RELIANCE, AAPL"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              sx={{ flex: 1, minWidth: 220 }}
+              variant="outlined"
+              color="primary"
+              onClick={() => runSearch(idx.symbol)}
+              sx={{ cursor: "pointer" }}
             />
-            <Button type="submit" variant="contained" startIcon={<SearchIcon />} disabled={loading}>
-              Search
-            </Button>
-          </Box>
+          ))}
+        </Stack>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 2 }}>
-            {EXAMPLE_SYMBOLS.map((s) => (
-              <Chip key={s} label={s} size="small" variant="outlined" onClick={() => runSearch(s)} sx={{ cursor: "pointer" }} />
-            ))}
-          </Stack>
-        </CardContent>
-      </Card>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.75 }}>
+          Popular symbols
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {STOCK_SYMBOLS.map((s) => (
+            <Chip key={s} label={s} size="small" variant="outlined" onClick={() => runSearch(s)} sx={{ cursor: "pointer" }} />
+          ))}
+        </Stack>
+      </SectionCard>
 
       {loading ? (
         <LoadingState label="Fetching quote..." />
@@ -84,7 +109,11 @@ const MarketsPage = () => {
           }
         />
       ) : searched ? null : (
-        <EmptyState title="Search for a stock" description="Enter a symbol above, or pick one of the examples, to see its live quote." />
+        <EmptyState
+          icon={<TravelExploreOutlinedIcon />}
+          title="Search for a stock"
+          description="Enter a symbol above, or pick one of the examples, to see its live quote."
+        />
       )}
     </Box>
   );
