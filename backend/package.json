@@ -6,13 +6,18 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "start:legacy": "node index.js",
-    "dev:legacy": "nodemon index.js"
+    "dev:legacy": "nodemon index.js",
+    "test": "jest --runInBand --forceExit",
+    "test:coverage": "jest --runInBand --forceExit --coverage"
   },
   "author": "Jaineel Hemnani",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^30.4.2",
+    "mongodb-memory-server": "^11.2.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   },
   "dependencies": {
     "@google/genai": "^2.16.0",
