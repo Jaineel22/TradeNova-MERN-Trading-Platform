@@ -49,13 +49,17 @@ async function registerUser({ username, email, password }) {
 }
 
 async function loginUser({ email, password }) {
-  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : email;
-  const user = await User.findOne({ email: normalizedEmail });
-
   // Same generic message whether the account doesn't exist or the password
   // is wrong - distinguishing the two lets an attacker enumerate registered
   // emails.
   const invalidCredentials = () => makeError("Invalid credentials", 400);
+
+  if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
+    throw invalidCredentials();
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await User.findOne({ email: normalizedEmail });
 
   if (!user) {
     throw invalidCredentials();
