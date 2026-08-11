@@ -1,93 +1,145 @@
-# TradeNova – Paper-Trading Platform
+# TradeNova
 
-TradeNova is a full-stack paper-trading platform: a public marketing site and an authenticated trading
+TradeNova is a full-stack MERN paper-trading platform: a public marketing site and an authenticated trading
 application in one product, backed by a JWT-secured REST API, real market data, and an AI portfolio assistant.
+Every account opens with **₹1,00,000 in simulated capital**; every order executes at a real, live market
+price fetched server-side — never a price the client supplies — and updates balance, holdings, and portfolio
+value the way a real brokerage would, without any real money ever changing hands.
 
-Every account starts with **₹1,00,000 in simulated capital**. Orders execute at the real, live market price —
-never a price you set yourself — and update your balance, holdings, and portfolio value exactly as a real
-brokerage would. No real money is ever involved, and TradeNova is not connected to any brokerage or exchange
-for order execution.
+## Problem Statement
 
----
-
-## Architecture
-
-TradeNova has **one canonical frontend** (`dashboard/`) serving both the public site and the trading
-application from a single React Router tree, and one backend API.
-
-```
-TradeNova/
-├── backend/          Express REST API, MongoDB, JWT auth, market data, AI assistant
-├── dashboard/         ← canonical frontend (public site + trading app)
-│   ├── public/
-│   └── src/
-│       ├── components/    shared UI: cards, charts, trade dialog, state components
-│       ├── context/        AuthContext (JWT session, ProtectedRoute)
-│       ├── layout/          PublicLayout (marketing) + AppShell/Sidebar/Topbar (trading)
-│       ├── pages/            Home, About, Product, Pricing, Support, Login, Signup,
-│       │                    Dashboard, Markets, Stock Detail, Orders, Holdings,
-│       │                    Positions, Funds, Watchlist, AI Assistant
-│       ├── config/            API base URL + axios client (JWT interceptor, 401 handling)
-│       └── utils/
-├── frontend/          legacy public-site prototype — retained temporarily, not part of
-│                      the live product (see note below)
-└── screenshots/       reference images
-```
-
-> **`frontend/` is legacy.** It was an earlier, separate public-site implementation with no trading
-> functionality and no working connection to the current backend. Everything it did has been rebuilt inside
-> `dashboard/` with accurate, up-to-date content. It's kept in the repository temporarily pending a final
-> decision to remove it.
-
-### Frontend
-
-- React (Create React App) + MUI, one `react-router-dom` v6 tree.
-- `PublicLayout` renders the marketing site (`/`, `/about`, `/product`, `/pricing`, `/support`); `AppShell`
-  (sidebar + topbar) renders the authenticated trading app under `/dashboard/*`, gated by `ProtectedRoute`.
-- A single axios instance (`config/apiClient.js`) attaches the JWT to every request and handles session
-  expiry centrally.
-- Charts via `chart.js`/`react-chartjs-2`.
-
-### Backend
-
-- Node.js + Express, MongoDB via Mongoose.
-- JWT authentication (bcrypt-hashed passwords); every trading/portfolio/watchlist route is scoped to the
-  authenticated user.
-- Order execution is server-authoritative: the execution price always comes from a live quote fetched at
-  order time, never from the client, with atomic balance/quantity guards against concurrent-request races.
-
-### Market data
-
-Live quotes and historical price charts (1D/1W/1M/3M/1Y) via **Yahoo Finance** (`yahoo-finance2`). Bare
-Indian tickers (e.g. `TCS`) resolve against the NSE listing first; qualified symbols (`INFY.NS`,
-`RELIANCE.BO`) and indices (`^NSEI`, `^BSESN`) are supported directly.
-
-### AI assistant
-
-A **Google Gemini** (`gemini-2.5-flash`) powered portfolio assistant, grounded in the authenticated user's
-live balance, holdings, and orders. Advisory only — it cannot place, modify, or cancel trades.
-
----
+Learning to trade by reading about it is different from watching your own balance move after you place an
+order. Most "paper trading" demos either use fabricated prices or skip the parts that make trading feel real
+— balance validation, average-cost tracking, P&L, order history. TradeNova solves that by pairing a real
+market-data feed with a fully worked simulated brokerage backend: the same validation, balance/holding
+arithmetic, and portfolio accounting a live trading platform would need, with the downside removed.
 
 ## Features
 
-- User registration and login (JWT)
-- Paper trading: buy/sell execution at live market prices, with balance and quantity validation
-- Weighted-average cost tracking on holdings
-- Portfolio dashboard: balance, portfolio value, P&L, allocation, holdings, recent orders
-- Order history
-- Markets: symbol search, index quotes (NIFTY 50, SENSEX), stock detail with historical chart
-- Watchlist with live prices
-- AI portfolio assistant
+- User registration and login (JWT-based sessions)
+- Simulated buy/sell order execution, priced server-side from a live market quote
+- Server-side balance and holding-quantity validation (insufficient funds / insufficient holdings rejected)
+- Weighted-average cost tracking as a holding is added to
+- Portfolio dashboard: available balance, portfolio value, unrealized P&L (₹ and %), allocation breakdown
+- Holdings, order history, and a delivery-vs-intraday Positions view
+- Funds page (balance / invested value / total account value)
+- Markets: symbol search, index quotes (NIFTY 50, SENSEX), a stock-detail page with a historical price chart
+- Watchlist with live prices, add/remove, and one-click access to a trade
+- AI portfolio assistant (Google Gemini), grounded only in the authenticated user's own account data
+- Security controls: password hashing, rate limiting, security headers, CORS allowlist, input validation,
+  and per-user authorization enforced on every API route (see [Security](#security))
+- Automated backend and frontend test suites, run in CI on every push/PR (see [Testing](#testing))
 
----
+## Tech Stack
 
-## Local setup
+**Frontend**
+- React 18 (Create React App)
+- React Router v6
+- MUI (Material UI) v5
+- Chart.js / react-chartjs-2
+- Axios
 
-### 1. Clone the repository
+**Backend**
+- Node.js + Express 5
+
+**Database**
+- MongoDB (Mongoose ODM)
+
+**Authentication**
+- JWT (`jsonwebtoken`), bcrypt password hashing (`bcryptjs`)
+
+**External services**
+- Market data: Yahoo Finance (`yahoo-finance2`) — no paid API key required
+- AI assistant: Google Gemini (`@google/genai`, `gemini-2.5-flash`)
+
+**Testing**
+- Backend: Jest + Supertest, against an in-process MongoDB (`mongodb-memory-server`)
+- Frontend: Jest + React Testing Library (bundled with Create React App)
+
+**CI/CD**
+- GitHub Actions (`.github/workflows/ci.yml`)
+
+**Deployment**
+- Frontend: Vercel (static build of `dashboard/`)
+- Backend: Render (Node web service)
+
+## Architecture
+
+```
+React Client (dashboard/)
+        │  axios + JWT (Authorization: Bearer <token>)
+        ▼
+Express REST API (backend/)
+        │
+        ├── Services / business logic (auth, trading, portfolio, watchlist)
+        │        │
+        │        ▼
+        │   MongoDB (users, orders, holdings, positions, watchlist)
+        │
+        ├── Yahoo Finance  (live quotes + historical price data)
+        └── Google Gemini  (portfolio-aware AI assistant)
+```
+
+There is **one canonical frontend** (`dashboard/`), serving both the public marketing site and the
+authenticated trading application from a single React Router tree — there is no separate marketing-site
+codebase.
+
+## Security
+
+- **Passwords**: hashed with bcrypt (`bcryptjs`), never stored or logged in plaintext.
+- **Authentication**: JWT, verified on every protected route; missing/malformed/expired tokens rejected with
+  401. Login returns the same generic "Invalid credentials" message whether the account doesn't exist or the
+  password is wrong, to resist user enumeration.
+- **Authorization**: every trading/portfolio/watchlist endpoint derives the acting user from the verified JWT
+  (`req.user.id`) — never from a client-supplied ID — so one user can never read or modify another user's
+  orders, holdings, funds, or watchlist. Verified by a dedicated two-user test suite (`backend/tests/integration/authorization.test.js`).
+- **Input validation**: server-side validation for email format, password length, username format, order
+  symbol/quantity/mode, and AI-assistant question length — the backend is the final authority; the frontend's
+  own validation is a UX convenience, not a security boundary.
+- **Trading integrity**: order execution price always comes from a live quote fetched by the server, never
+  from the client; balance and holding-quantity checks use atomic MongoDB updates to guard against
+  double-spend races from concurrent/duplicate requests.
+- **Rate limiting**: login, registration, order placement, and the AI assistant are all rate-limited
+  per-IP/per-user, with sensible defaults, configurable via environment variables.
+- **Security headers**: `helmet` (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, etc.).
+- **CORS**: an explicit origin allowlist (never `*`), configurable via `ALLOWED_ORIGINS`.
+- **Error handling**: unexpected errors are logged server-side in full but return a generic message to the
+  client — no stack traces, file paths, or database error internals are ever exposed in an API response.
+- **Secrets**: no credentials are committed to git; `.env` is gitignored in both apps, and `.env.example`
+  contains placeholder values only.
+
+## Testing
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/TradeNova.git
+# Backend — 85 tests across 9 suites
+cd backend
+npm test                # run once
+npm run test:coverage   # with a coverage report (backend/coverage/)
+
+# Dashboard — 31 tests across 4 suites
+cd dashboard
+npm test                # watch mode
+npm run test:coverage   # one-shot run with a coverage report (dashboard/coverage/)
+npm run build            # production build
+```
+
+Backend tests run against a real, in-process MongoDB (`mongodb-memory-server`) — no external database and
+nothing ever touches a developer/production database. Yahoo Finance and Gemini are both mocked
+(`backend/tests/mocks/`), so the suite makes no real network/API calls and needs no real credentials.
+Dashboard tests mock the shared API client (`dashboard/src/config/__mocks__/apiClient.js`), so no test depends
+on a live backend. A GitHub Actions workflow runs both suites and the production build on every push and pull
+request.
+
+Coverage focuses on business-critical logic — authentication, cross-user authorization, order
+execution/validation, portfolio math, watchlist CRUD, and AI-context isolation — rather than every UI pixel;
+see the README section in git history / `backend/tests` and `dashboard/src/**/*.test.js` for the exact suites.
+
+## Local Setup
+
+### 1. Clone
+
+```bash
+git clone https://github.com/Jaineel22/TradeNova-MERN-Trading-Platform.git
 cd TradeNova
 ```
 
@@ -98,7 +150,7 @@ cd backend
 npm install
 ```
 
-Create `backend/.env`:
+Create `backend/.env` (see [Environment Variables](#environment-variables)):
 
 ```env
 MONGO_URL=your_mongodb_connection_string
@@ -111,7 +163,7 @@ GEMINI_API_KEY=your_gemini_api_key
 npm start
 ```
 
-### 3. Frontend (dashboard/)
+### 3. Dashboard (frontend)
 
 ```bash
 cd dashboard
@@ -119,102 +171,78 @@ npm install
 npm start
 ```
 
-By default the frontend talks to the production API (`dashboard/src/config/api.js`). For local development
-against your own backend, set `REACT_APP_API_URL=http://localhost:3003` (e.g. in `dashboard/.env.development`
-or the shell environment) before `npm start`.
+By default the dashboard talks to the deployed production API (`dashboard/src/config/api.js`). For local
+development against your own backend, set `REACT_APP_API_URL=http://localhost:3003` (e.g. in
+`dashboard/.env.development` or the shell environment) before `npm start`.
 
----
+## Environment Variables
 
-## Testing & CI
+`backend/.env.example` documents every variable — copy it to `backend/.env` and fill in real values. It
+contains placeholders only; no real secret is ever committed.
 
-Both apps have automated test suites; a GitHub Actions workflow (`.github/workflows/ci.yml`) runs both on
-every push and pull request.
+| Variable | Required | Purpose |
+|---|---|---|
+| `MONGO_URL` | Yes | MongoDB connection string |
+| `JWT_SECRET` | Yes | Signs/verifies authentication tokens |
+| `PORT` | No (defaults to 3003) | Backend listen port |
+| `GEMINI_API_KEY` | No (AI assistant returns 503 if unset) | Google Gemini API key |
+| `ALLOWED_ORIGINS` | No | Comma-separated CORS allowlist override |
+| `LOGIN_RATE_LIMIT_MAX`, `REGISTER_RATE_LIMIT_MAX`, `ORDER_RATE_LIMIT_MAX` (+ `*_WINDOW_MS`) | No | Rate-limit tuning |
 
-### Backend (`backend/`)
-
-Jest + Supertest, run against a real, in-process MongoDB (`mongodb-memory-server`) — no external database, no
-internet access, and nothing ever touches a developer or production database. Yahoo Finance and Gemini are
-both mocked (`tests/mocks/`), so the suite never makes a real market-data or AI API call and needs no real
-API keys.
-
-```bash
-cd backend
-npm test               # run once
-npm run test:coverage  # with a coverage report (backend/coverage/)
-```
-
-Covers: registration/login validation and enumeration-resistance, protected-route auth, buy/sell order
-execution and validation (insufficient funds/holdings, invalid symbol/quantity/mode), portfolio P&L/allocation
-math, watchlist CRUD, AI assistant request handling (including that a client can't override whose account
-context is sent to the model), rate limiting, and cross-user authorization (a dedicated suite proves user B
-can never read or modify user A's watchlist, holdings, orders, or funds).
-
-`JWT_SECRET` and the rate-limit thresholds default to test-safe values in `tests/setupAfterEnv.js` if unset,
-so no `.env` file or secrets are required to run the suite locally or in CI.
-
-### Dashboard (`dashboard/`)
-
-Jest + React Testing Library, already bundled with Create React App — no new frontend testing dependency was
-added. `src/config/apiClient.js` is mocked in every test (`src/config/__mocks__/apiClient.js`), so no test
-depends on a live backend.
-
-```bash
-cd dashboard
-npm test                # watch mode
-npm run test:coverage   # one-shot run with a coverage report (dashboard/coverage/)
-npm run build            # production build
-```
-
-Covers: every public/auth/dashboard route rendering and redirect behaviour (logged-in vs logged-out),
-watchlist loading/empty/error states and add/remove/trade interactions, the buy/sell dialog's quantity
-stepper, submission and error handling, and the Dashboard's metric cards/holdings/orders rendering from
-real API response shapes.
-
-Not covered by an automated UI test yet: Orders/Holdings/Positions/Funds/Markets/Stock-Detail page rendering
-and the Login/Signup submit flows — these are exercised by the backend's integration tests and were manually
-verified in earlier phases, but don't have dedicated React Testing Library coverage.
-
-### What's intentionally not automated
-
-A full browser-based end-to-end suite (e.g. Playwright driving real backend + frontend + database processes)
-was not added to CI. The backend integration tests already exercise the real trading/auth/authorization logic
-end-to-end at the API layer, and the frontend component tests cover real user interactions — introducing a
-second, heavier E2E layer on top would mean orchestrating multi-process startup in CI for a large increase in
-complexity and flakiness relative to what it would add. Manual end-to-end verification (real backend, real
-Yahoo Finance, a real browser) was performed throughout earlier phases instead.
-
----
+The dashboard needs no secrets — `REACT_APP_API_URL` is the only variable, and it's a public API base URL,
+not a credential.
 
 ## Deployment
 
-`dashboard/` is the only application that should be deployed as the public-facing TradeNova product — set
-your hosting provider's project root/build directory to `dashboard/` (standard CRA build: `npm run build`,
-output in `dashboard/build/`). `backend/` deploys separately as a Node service; its `CORS` origin list
-(`backend/src/app.js`) must include whichever domain serves `dashboard/`.
+- **Frontend**: `dashboard/` is deployed as a static build on Vercel (Vercel project root directory set to
+  `dashboard/`; build command `npm run build`, output `dashboard/build/`).
+- **Backend**: deployed as a Node web service on Render, running `npm start` from `backend/`.
+- The backend's CORS allowlist (`backend/src/app.js`, overridable via `ALLOWED_ORIGINS`) must include whatever
+  domain serves the deployed dashboard.
 
----
+## Project Structure
 
-## Screenshots
+```
+TradeNova/
+├── .github/workflows/     CI (GitHub Actions): backend tests, dashboard tests, production build
+├── backend/
+│   ├── src/
+│   │   ├── controllers/     route handlers
+│   │   ├── services/         business logic (auth, trading, portfolio, market data, watchlist, AI)
+│   │   ├── models/            Mongoose schemas (User, Order, Holding, Position, Watchlist)
+│   │   ├── middleware/         auth, rate limiting, error handling
+│   │   ├── validators/         input validation
+│   │   └── routes/              Express routers
+│   └── tests/                unit + integration tests, mocks for Yahoo Finance and Gemini
+├── dashboard/                 ← canonical frontend (public site + trading app)
+│   ├── public/
+│   └── src/
+│       ├── components/          shared UI: cards, charts, trade dialog, state components
+│       ├── context/              AuthContext (JWT session, ProtectedRoute)
+│       ├── layout/                PublicLayout (marketing) + AppShell/Sidebar/Topbar (trading)
+│       ├── pages/                  Home, About, Product, Pricing, Support, Login, Signup,
+│       │                          Dashboard, Markets, Stock Detail, Orders, Holdings,
+│       │                          Positions, Funds, Watchlist, AI Assistant
+│       └── config/                  API base URL + axios client (JWT interceptor, 401 handling)
+└── screenshots/               reference images
+```
 
-![Home](screenshots/home.png)
-![Dashboard](screenshots/dashboard.png)
+## Limitations
 
-## System architecture
-
-![System Architecture](screenshots/tradenova_system_architecture.png)
-![JWT Authentication Flow](screenshots/tradenova_jwt_authentication_flow.png)
-
----
+- **This is a paper-trading simulator, not a real brokerage.** No real money is ever involved, and the
+  application is not connected to any real brokerage, exchange, or settlement system.
+- Market prices come from Yahoo Finance's public data; they are suitable for a learning/demo tool, not for
+  real trading decisions, and are not guaranteed real-time or exchange-accurate.
+- "Positions" currently tracks delivery-style holdings only — intraday-style position tracking is not
+  implemented, and the page says so rather than showing fabricated data.
+- There is no historical portfolio-value chart (only a live snapshot) — the dashboard says so explicitly
+  rather than inventing one.
+- A handful of dashboard pages (Orders, Holdings, Positions, Funds, Markets, Stock Detail, the Login/Signup
+  submit flows) are covered by backend integration tests and manual verification, but don't yet have
+  dedicated React Testing Library component tests.
+- No automated browser-based end-to-end suite runs in CI (see [Testing](#testing) for why, and what covers
+  the same ground instead).
 
 ## Author
 
-**Jaineel Hemnani**
-Full Stack Developer
-
----
-
-## Note
-
-This project was built for portfolio and learning purposes, to demonstrate secure full-stack application
-development using the MERN stack. It is a paper-trading simulator — not a real brokerage, and not connected
-to any real trading or settlement system.
+**Jaineel Hemnani** — Full Stack Developer
